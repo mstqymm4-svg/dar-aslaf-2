@@ -1,0 +1,99 @@
+import { useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { Sparkles, Search, X, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useT } from "@/lib/i18n";
+
+export default function AISearch({ books, onResults, onClear }) {
+  const t = useT();
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [active, setActive] = useState(false);
+
+  const handleSearch = async () => {
+    if (!query.trim()) return;
+    setLoading(true);
+    setActive(true);
+
+    let matchedBooks = [];
+    let explanation = "";
+
+    try {
+      if (base44?.integrations?.Core?.InvokeLLM) {
+        const booksList = books.map((b, i) => `${i + 1}. العنوان: "${b.title}" | المؤلف: ${b.author} | التصنيف: ${b.category} | ID: ${b.id}`).join("\n");
+
+        const result = await base44.integrations.Core.InvokeLLM({
+          prompt: `أنت مساعد مكتبة إسلامية ذكي. المستخدم يبحث عن: "${query}"\n\nقائمة الكتب المتاحة:\n${booksList}\n\nمهمتك: ابحث في القائمة وأعد IDs الكتب المناسبة للبحث (كل ID في سطر). إذا لم يوجد شيء مناسب، أعد قائمة فارغة. أجب فقط بالـ IDs.`,
+          response_json_schema: {
+            type: "object",
+            properties: {
+              matching_ids: { type: "array", items: { type: "string" } },
+              explanation: { type: "string" }
+            }
+          }
+        });
+
+        matchedBooks = books.filter((b) => result.matching_ids?.includes(b.id));
+        explanation = result.explanation;
+      }
+    } catch (err) {
+      console.warn("LLM search failed, using smart local search fallback:", err);
+    }
+
+    // Local smart fallback if LLM is unavailable or returned 0
+    if (matchedBooks.length === 0) {
+      const q = query.toLowerCase().trim();
+      matchedBooks = books.filter((b) =>
+        b.title?.toLowerCase().includes(q) ||
+        b.author?.toLowerCase().includes(q) ||
+        b.category?.toLowerCase().includes(q) ||
+        b.description?.toLowerCase().includes(q)
+      );
+      explanation = `نتائج البحث الذكي عن: "${query}"`;
+    }
+
+    onResults(matchedBooks, explanation || `نتائج البحث عن: "${query}"`);
+    setLoading(false);
+  };
+
+  const handleClear = () => {
+    setQuery("");
+    setActive(false);
+    onClear();
+  };
+
+  return (
+    <div className="mb-4">
+      
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      
+      {active && !loading &&
+      <div className="flex items-center gap-1.5 mt-2">
+          <Sparkles className="w-3 h-3 text-accent" />
+          <span className="text-xs text-muted-foreground">{t.aiSearchActive}</span>
+        </div>
+      }
+    </div>);
+
+}

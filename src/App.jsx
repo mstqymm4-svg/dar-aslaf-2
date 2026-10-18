@@ -42,18 +42,16 @@ const SplashPreview = lazy(() => import('./pages/SplashPreview'));
 const Login = lazy(() => import('./pages/Login'));
 import DarAlUloomSplash from './components/splash/DarAlUloomSplash';
 
+import ErrorBoundary from './components/ErrorBoundary';
+
 const PageLoader = () => (
   <div className="min-h-[60vh] w-full max-w-6xl mx-auto px-4 pt-6">
     <PageSpinner />
   </div>
 );
 
-
 const AuthenticatedApp = () => {
-  const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
-  const [splashDone, setSplashDone] = useState(
-    () => { try { return sessionStorage.getItem('dar_splash_shown') === '1'; } catch { return false; } }
-  );
+  const { user } = useAuth();
 
   useEffect(() => {
     loadSettings(user?.email);
@@ -75,75 +73,48 @@ const AuthenticatedApp = () => {
     return cleanup;
   }, []);
 
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      navigateToLogin();
-      return null;
-    }
-  }
-
-  if (!splashDone) {
-    return (
-      <DarAlUloomSplash
-        isLoading={isLoadingPublicSettings || isLoadingAuth}
-        onComplete={() => {
-          try { sessionStorage.setItem('dar_splash_shown', '1'); } catch {}
-          setSplashDone(true);
-        }}
-      />
-    );
-  }
-
-  if (isLoadingPublicSettings || isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <LogoLoader size={100} />
-      </div>
-    );
-  }
-
   return (
     <>
-    <SaveStatusIndicator />
-    <SyncStatusBadge />
-    <InstallPrompt />
-    <Suspense fallback={<PageLoader />}>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/books" element={<Books />} />
-          <Route path="/book/:id" element={<BookDetails />} />
-          <Route path="/favorites" element={<Favorites />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/dev" element={<DevPanel />} />
-          <Route path="/read/:id" element={<ReadBook />} />
-          <Route path="/videos" element={<Videos />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/splash-preview" element={<SplashPreview />} />
-          <Route path="*" element={<PageNotFound />} />
-        </Route>
-      </Routes>
-    </Suspense>
-    </>);
-
+      <SaveStatusIndicator />
+      <SyncStatusBadge />
+      <InstallPrompt />
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/books" element={<Books />} />
+            <Route path="/book/:id" element={<BookDetails />} />
+            <Route path="/favorites" element={<Favorites />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/dev" element={<DevPanel />} />
+            <Route path="/read/:id" element={<ReadBook />} />
+            <Route path="/videos" element={<Videos />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/splash-preview" element={<SplashPreview />} />
+            <Route path="*" element={<PageNotFound />} />
+          </Route>
+        </Routes>
+      </Suspense>
+    </>
+  );
 };
 
 function App() {
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <AuthenticatedApp />
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
-    </AuthProvider>);
-
+    <ErrorBoundary>
+      <AuthProvider>
+        <QueryClientProvider client={queryClientInstance}>
+          <Router>
+            <AuthenticatedApp />
+          </Router>
+          <Toaster />
+        </QueryClientProvider>
+      </AuthProvider>
+    </ErrorBoundary>
+  );
 }
 
 export default App;
